@@ -3,20 +3,24 @@ set -e
 
 echo "=== DÉMARRAGE DU SCRIPT D'ENTRÉE ==="
 
-# Initialisation de la base Airflow
-airflow db init
+# Migration de la base de données (équivalent moderne de db init)
+echo "Initialisation et migration de la base Neon..."
+airflow db migrate
 
-# Création de l'admin
+# Création de l'utilisateur Admin
+echo "Création de l'utilisateur admin..."
 airflow users create \
     --username admin \
     --firstname Teddy \
     --lastname Admin \
     --role Admin \
     --email admin@example.com \
-    --password admin
+    --password adminpassword
 
-# Lancement du scheduler en tâche de fond
+# Lancement du scheduler en arrière-plan
+echo "Démarrage du Scheduler..."
 airflow scheduler &
 
-# Lancement du webserver (garde le conteneur actif)
+# Lancement du webserver au premier plan
+echo "Démarrage du Webserver sur le port 7860..."
 exec airflow webserver
