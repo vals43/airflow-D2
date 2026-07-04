@@ -1,37 +1,12 @@
 FROM apache/airflow:2.10.2-python3.11
 
-USER root
+# Force le serveur FAB/Gunicorn à écouter sur le port Hugging Face
+ENV AIRFLOW__WEBSERVER__WEB_SERVER_PORT=7860
+ENV AIRFLOW__WEBSERVER__BASE_URL=http://localhost:7860
 
-# Installer Git et dos2unix
-RUN apt-get update && apt-get install -y git dos2unix && apt-get clean
-
-# Définir le répertoire de travail
-WORKDIR /opt/airflow
-
-# Copier le script d'entrée
-COPY entrypoint.sh ./entrypoint.sh
-
-# Forcer les droits d'exécution et le format Linux (LF)
-RUN chmod +x ./entrypoint.sh && dos2unix ./entrypoint.sh
-
-USER airflow
-
-# Configurations Airflow obligatoires pour Hugging Face (Version Récente)
-ENV AIRFLOW__API__PORT=7860
-ENV AIRFLOW__API__BASE_URL=http://localhost:7860
+# Désactive les exemples pour économiser la RAM de Neon et HF
+ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
 
-# Nettoyage de l'interface
-ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
-
-# === CORRECTIFS SÉCURITÉ / CSRF COOKIE ===
-ENV AIRFLOW__WEBSERVER__COOKIE_SECURE=True
-ENV AIRFLOW__WEBSERVER__SESSION_COOKIE_SAMESITE=None
-ENV AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=True
-
-# Connexion Neon
+# Ta chaîne de connexion Neon
 ENV AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://neondb_owner:npg_S3nxyH9aOPke@ep-hidden-fog-at6pfq19-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require
-
-EXPOSE 7860
-
-ENTRYPOINT ["./entrypoint.sh"]
