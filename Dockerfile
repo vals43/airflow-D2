@@ -4,8 +4,9 @@ FROM apache/airflow:2.10.2-python3.11
 ENV AIRFLOW__WEBSERVER__WEB_SERVER_PORT=7860
 ENV AIRFLOW__WEBSERVER__BASE_URL=http://localhost:7860
 
-# --- CONFIGURATION CORE OPTIMISÉE ---
-ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
+# --- CONFIGURATION CORE COMPATIBLE SQLITE/NEON ---
+# SequentialExecutor accepte SQLite ET Postgres sans broncher
+ENV AIRFLOW__CORE__EXECUTOR=SequentialExecutor
 ENV AIRFLOW__CORE__LOAD_EXAMPLES=False
 
 # --- CORRECTIFS POUR LE PROXY DE HUGGING FACE ---
@@ -14,7 +15,6 @@ ENV AIRFLOW__WEBSERVER__SESSION_COOKIE_SAMESITE=None
 ENV AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=True
 
 # --- SYNCHRONISATION DU DOSSIER DAGS ---
-# On s'assure que le dossier dags du repo va bien là où Airflow l'attend
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
 
 # Copie du script d'entrée
