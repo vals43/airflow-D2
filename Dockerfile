@@ -17,7 +17,7 @@ RUN chmod +x ./entrypoint.sh && dos2unix ./entrypoint.sh
 USER airflow
 
 # Configurations Airflow obligatoires pour Hugging Face
-ENV AIRFLOW__WEBSERVER__WEB_SERVER_PORT=7860
+ENV AIRFLOW__API__PORT=7860
 ENV AIRFLOW__WEBSERVER__BASE_URL=http://localhost:7860
 ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
 
