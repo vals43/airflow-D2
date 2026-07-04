@@ -1,18 +1,21 @@
-#!/bin/bash
+#!/bash/bin
 set -e
 
 echo "=== DÉMARRAGE DU SCRIPT D'ENTRÉE ==="
 
-# Migration de la base Neon
+# Migration de la base Neon propre
 echo "Initialisation et migration de la base Neon..."
 airflow db migrate
 
-# Création de l'utilisateur Admin (Version Moderne d'Airflow)
+# Création de l'utilisateur Admin sécurisée
 echo "Création de l'utilisateur admin..."
-airflow users create-admin \
+airflow users create \
     --username admin \
-    --password adminpassword \
-    --email admin@example.com || echo "L'utilisateur admin existe déjà ou la commande a été ignorée."
+    --firstname Teddy \
+    --lastname Admin \
+    --role Admin \
+    --email admin@example.com \
+    --password adminpassword || echo "L'utilisateur existe déjà."
 
 # Lancement du scheduler en arrière-plan
 echo "Démarrage du Scheduler..."
