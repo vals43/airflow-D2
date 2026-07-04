@@ -1,13 +1,12 @@
-#!/bash/bin
-# (Le shell par défaut dans l'image Airflow est souvent bash, mais on sécurise)
 #!/bin/bash
+set -e
 
-# Initialisation de la base de données Airflow locale (SQLite par défaut pour l'instant)
-echo "Initialisation de la base de données Airflow..."
+echo "=== DÉMARRAGE DU SCRIPT D'ENTRÉE ==="
+
+# Initialisation de la base Airflow
 airflow db init
 
-# Création de l'utilisateur Admin pour te connecter à l'interface
-echo "Création de l'utilisateur admin..."
+# Création de l'admin
 airflow users create \
     --username admin \
     --firstname Teddy \
@@ -16,11 +15,8 @@ airflow users create \
     --email admin@example.com \
     --password admin
 
-# Lancer le Scheduler en arrière-plan (&) pour qu'il gère l'exécution des DAGs
-echo "Démarrage du Scheduler..."
+# Lancement du scheduler en tâche de fond
 airflow scheduler &
 
-# Lancer le Webserver au premier plan (via exec) sur le port obligatoire 7860
-# C'est ce processus qui va maintenir le conteneur Hugging Face en vie
-echo "Démarrage du Webserver sur le port 7860..."
+# Lancement du webserver (garde le conteneur actif)
 exec airflow webserver
