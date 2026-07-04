@@ -1,4 +1,4 @@
-FROM apache/airflow:3.2.1-python3.11
+FROM apache/airflow:2.10.2-python3.11
 
 USER root
 
@@ -16,9 +16,9 @@ RUN chmod +x ./entrypoint.sh && dos2unix ./entrypoint.sh
 
 USER airflow
 
-# Configurations Airflow obligatoires pour Hugging Face
+# Configurations Airflow obligatoires pour Hugging Face (Version Récente)
 ENV AIRFLOW__API__PORT=7860
-ENV AIRFLOW__WEBSERVER__BASE_URL=http://localhost:7860
+ENV AIRFLOW__API__BASE_URL=http://localhost:7860
 ENV AIRFLOW__CORE__EXECUTOR=LocalExecutor
 
 # Nettoyage de l'interface
