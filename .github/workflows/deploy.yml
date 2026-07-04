@@ -17,4 +17,4 @@ jobs:
     - name: Push to Hugging Face Spaces
       env:
         HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      run: git push --force https://vals43:$HF_TOKEN@huggingface.co/spaces/vals43/airflow_D2 main
+      run: git push --force https://oauth2:$HF_TOKEN@huggingface.co/spaces/vals43/airflow_D2 main
