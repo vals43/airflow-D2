@@ -3,19 +3,16 @@ set -e
 
 echo "=== DÉMARRAGE DU SCRIPT D'ENTRÉE ==="
 
-# Migration de la base de données (équivalent moderne de db init)
+# Migration de la base Neon
 echo "Initialisation et migration de la base Neon..."
 airflow db migrate
 
-# Création de l'utilisateur Admin
+# Création de l'utilisateur Admin (Version Moderne d'Airflow)
 echo "Création de l'utilisateur admin..."
-airflow users create \
+airflow users create-admin \
     --username admin \
-    --firstname Teddy \
-    --lastname Admin \
-    --role Admin \
-    --email admin@example.com \
-    --password adminpassword
+    --password adminpassword \
+    --email admin@example.com || echo "L'utilisateur admin existe déjà ou la commande a été ignorée."
 
 # Lancement du scheduler en arrière-plan
 echo "Démarrage du Scheduler..."
