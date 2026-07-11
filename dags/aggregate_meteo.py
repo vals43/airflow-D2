@@ -8,11 +8,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 import pandas as pd
 import pendulum
 from airflow.decorators import dag, task
-from airflow.datasets import Asset
+from airflow.datasets import Dataset
 
 CSV_PATH = "/opt/airflow/data/meteo_villes.csv"
 RESUME_PATH = "/opt/airflow/data/meteo_resume.csv"
-csv_asset = Asset("meteo://villes.csv")
+csv_asset = Dataset("meteo://villes.csv")
 
 
 @dag(
