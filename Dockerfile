@@ -1,5 +1,8 @@
 FROM apache/airflow:2.10.2-python3.11
 
+# --- DRIVER POSTGRESQL (NÉCESSAIRE POUR NEON) ---
+RUN pip install --no-cache-dir psycopg2-binary
+
 # --- CONFIGURATION DU PORT HUGGING FACE ---
 ENV AIRFLOW__WEBSERVER__WEB_SERVER_PORT=7860
 ENV AIRFLOW__WEBSERVER__BASE_URL=http://localhost:7860
