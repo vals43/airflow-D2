@@ -17,9 +17,6 @@ ENV AIRFLOW__WEBSERVER__COOKIE_SECURE=True
 ENV AIRFLOW__WEBSERVER__SESSION_COOKIE_SAMESITE=None
 ENV AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=True
 
-# --- DOSSIER DATA PERSISTANT (CSV MÉTÉO) ---
-COPY --chown=airflow:root data/ /opt/airflow/data/
-
 # --- SYNCHRONISATION DU DOSSIER DAGS ---
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
 
