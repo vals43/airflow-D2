@@ -7,7 +7,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import pandas as pd
 import pendulum
-from airflow.sdk import dag, task, Asset
+from airflow.decorators import dag, task
+from airflow.datasets import Asset
 
 CSV_PATH = "/opt/airflow/data/meteo_villes.csv"
 RESUME_PATH = "/opt/airflow/data/meteo_resume.csv"

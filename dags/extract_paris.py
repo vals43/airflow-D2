@@ -6,8 +6,10 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 
 import pendulum
-from airflow.sdk import dag, task, get_current_context, Asset
-from airflow.sdk import Variable
+from airflow.decorators import dag, task
+from airflow.operators.python import get_current_context
+from airflow.datasets import Asset
+from airflow.models import Variable
 
 from utils import extraire_meteo, transformer_donnees, sauvegarder_csv
 
