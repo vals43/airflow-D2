@@ -1,4 +1,4 @@
-from _future_ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -6,7 +6,7 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, os.path.join(os.path.dirname(_file_), "..", "dags"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "dags"))
 from aqi_utils import VILLES, RAW_DIR, CLEAN_DIR, CLEAN_CSV, transformer_mesure  # noqa: E402
 
 VILLES_PAR_COORD = {(v["latitude"], v["longitude"]): v for v in VILLES}
@@ -65,5 +65,5 @@ def reconstruire_clean_csv() -> int:
     return len(lignes_triees)
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     reconstruire_clean_csv()
