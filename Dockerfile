@@ -17,8 +17,9 @@ ENV AIRFLOW__WEBSERVER__COOKIE_SECURE=True
 ENV AIRFLOW__WEBSERVER__SESSION_COOKIE_SAMESITE=None
 ENV AIRFLOW__WEBSERVER__ENABLE_PROXY_FIX=True
 
-# --- SYNCHRONISATION DU DOSSIER DAGS ---
+# --- SYNCHRONISATION DES DOSSIERS DAGS ET SCRIPTS ---
 COPY --chown=airflow:root dags/ /opt/airflow/dags/
+COPY --chown=airflow:root scripts/ /opt/airflow/scripts/
 
 # Copie du script d'entrée
 COPY --chown=airflow:root entrypoint.sh /entrypoint.sh
