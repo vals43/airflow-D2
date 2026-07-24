@@ -54,7 +54,7 @@ def reconstruire_clean_csv() -> int:
             cle = (ligne["ville"], ligne["horodatage_utc"])  # dedup : ville+heure
             lignes_par_cle[cle] = ligne  # la derniere lecture ecrase (idempotent)
 
-    lignes_triees = sorted(lignes_par_cle.values(), key=lambda x: (x["ville"], x["horodatage_utc"]))
+    lignes_triees = sorted(lignes_par_cle.values(), key=lambda x: x["horodatage_utc"])
 
     with open(CLEAN_CSV, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=COLONNES)
