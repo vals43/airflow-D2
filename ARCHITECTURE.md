@@ -25,7 +25,7 @@
 │                  Airflow 2.10.2 (Hugging Face Spaces)               │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐   │
-│  │                  DAG : aggregate_meteo                        │   │
+│  │               DAG : aqi_pipeline                             │   │
 │  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐ │   │
 │  │  │ Extract  │  │ Extract  │  │ Extract  │  │   Extract    │ │   │
 │  │  │ Antanan. │  │  London  │  │ New York │  │ Paris / Tokyo│ │   │
@@ -33,7 +33,7 @@
 │  │       └──────┬──────┘     ┌───────┘                │         │   │
 │  │              ▼            ▼                        ▼         │   │
 │  │  ┌────────────────────────────────────────────────────────┐  │   │
-│  │  │              Aggregate (classement + save)             │  │   │
+│  │  │      Rebuild clean/ + load warehouse                    │  │   │
 │  │  └─────────────────────┬──────────────────────────────────┘  │   │
 │  └────────────────────────┼─────────────────────────────────────┘   │
 └───────────────────────────┼─────────────────────────────────────────┘
@@ -52,7 +52,7 @@
 
 ### raw/ — Zone brute (intouchable)
 ```
-/opt/airflow/raw/
+/opt/airflow/data/raw/
 ├── Antananarivo/
 │   ├── 2026-07-01_00:00:00.json
 │   ├── 2026-07-01_01:00:00.json
@@ -69,14 +69,14 @@
 
 ### clean/ — Zone nettoyée (reconstruite à chaque run)
 ```
-/opt/airflow/data/meteo_villes.csv
+/opt/airflow/data/clean/qualite_air.csv
 ```
 
 - Un seul fichier CSV, toutes villes réunies
 - Une ligne par (ville × heure)
 - Tri chronologique, sans doublons
 - Reconstruit intégralement depuis raw/ à chaque exécution
-- Colonnes : ville, latitude, longitude, horodatage, AQI, CO, NO₂, O₃, PM2.5, PM10, température, humidité, vent
+- Colonnes : ville, pays, latitude, longitude, horodatage_utc, aqi, co_ug_m3, no_ug_m3, no2_ug_m3, o3_ug_m3, so2_ug_m3, pm2_5_ug_m3, pm10_ug_m3, nh3_ug_m3
 
 ### Data Warehouse (Neon PostgreSQL)
 
@@ -91,13 +91,13 @@ Schéma en étoile :
 │ id_ville        FK   │──┼────────────────┐
 │ aqi                  │  │                │
 │ co                   │  │                │
+│ no                   │  │                │
 │ no₂                  │  │                │
 │ o₃                   │  │                │
+│ so₂                  │  │                │
 │ pm2_5                │  │                │
 │ pm10                 │  │                │
-│ temperature_c        │  │                │
-│ humidite_pct         │  │                │
-│ vent_m_s             │  │                │
+│ nh₃                  │  │                │
 └──────────────────────┘  │                │
                            │                │
 ┌──────────────────────┐  │                │
@@ -160,6 +160,6 @@ Conteneur Airflow 2.10.2 (démarrage)
 
 ## Périodicité
 
-- **Scheduling** : quotidien (`@daily`) à 00:00 UTC
+- **Scheduling** : horaire (`@hourly`) à H+5 minutes
 - **Backfill** : script dédié pour rattraper les 12 derniers mois
 - **Données** : chaque run produit un snapshot des 5 villes à H + quelques minutes
