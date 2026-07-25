@@ -130,6 +130,21 @@ def _upsert_dim_temps(cur, horodatage_utc):
     return cur.fetchone()[0]
 
 
+def _dernier_horodatage_warehouse(conn):
+    with conn.cursor() as cur:
+        cur.execute("""
+            SELECT dt.date_entiere, dt.heure
+            FROM fact_air_quality f
+            JOIN dim_temps dt ON f.id_temps = dt.id_temps
+            ORDER BY dt.date_entiere DESC, dt.heure DESC
+            LIMIT 1
+        """)
+        row = cur.fetchone()
+        if row:
+            return row[0], row[1]
+        return None, None
+
+
 def _upsert_fact(cur, id_temps, id_ville, row):
     cur.execute(
         """
@@ -171,17 +186,31 @@ def charger_warehouse(dsn: str) -> int:
     conn = psycopg2.connect(dsn)
     try:
         _creer_tables(conn)
+
+        derniere_date, derniere_heure = _dernier_horodatage_warehouse(conn)
+        logger.info(
+            "Dernier horodatage en warehouse : %s %s",
+            derniere_date, derniere_heure,
+        )
+
         lignes = 0
         with open(CLEAN_CSV, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
+                if derniere_date is not None:
+                    dt = datetime.strptime(row["horodatage_utc"], "%Y-%m-%d %H:%M:%S")
+                    if dt.date() < derniere_date or (
+                        dt.date() == derniere_date and dt.hour <= derniere_heure
+                    ):
+                        continue
+
                 with conn.cursor() as cur:
                     id_ville = _upsert_dim_ville(cur, row)
                     id_temps = _upsert_dim_temps(cur, row["horodatage_utc"])
                     _upsert_fact(cur, id_temps, id_ville, row)
                 lignes += 1
         conn.commit()
-        logger.info("Warehouse charge : %s lignes", lignes)
+        logger.info("Warehouse charge : %s nouvelles lignes", lignes)
         return lignes
     except Exception:
         conn.rollback()
