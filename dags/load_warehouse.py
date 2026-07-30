@@ -163,6 +163,9 @@ def charger_warehouse(dsn: str, force: bool = False) -> int:
         logger.info("Dernier horodatage en warehouse : %s %s", derniere_date, derniere_heure)
 
         rows: list[tuple] = []
+        ville_cache: dict[str, int] = {}
+        temps_cache: dict[str, int] = {}
+
         with open(CLEAN_CSV, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -173,22 +176,31 @@ def charger_warehouse(dsn: str, force: bool = False) -> int:
                     ):
                         continue
 
-                with conn.cursor() as cur:
-                    id_ville = _upsert_dim_ville(cur, row)
-                    id_temps = _upsert_dim_temps(cur, row["horodatage_utc"])
-                    rows.append((
-                        id_temps,
-                        id_ville,
-                        _int_or_none(row.get("aqi")),
-                        _float_or_none(row.get("co_ug_m3")),
-                        _float_or_none(row.get("no_ug_m3")),
-                        _float_or_none(row.get("no2_ug_m3")),
-                        _float_or_none(row.get("o3_ug_m3")),
-                        _float_or_none(row.get("so2_ug_m3")),
-                        _float_or_none(row.get("pm2_5_ug_m3")),
-                        _float_or_none(row.get("pm10_ug_m3")),
-                        _float_or_none(row.get("nh3_ug_m3")),
-                    ))
+                nom = row["ville"]
+                if nom not in ville_cache:
+                    with conn.cursor() as cur:
+                        ville_cache[nom] = _upsert_dim_ville(cur, row)
+                id_ville = ville_cache[nom]
+
+                ts = row["horodatage_utc"]
+                if ts not in temps_cache:
+                    with conn.cursor() as cur:
+                        temps_cache[ts] = _upsert_dim_temps(cur, ts)
+                id_temps = temps_cache[ts]
+
+                rows.append((
+                    id_temps,
+                    id_ville,
+                    _int_or_none(row.get("aqi")),
+                    _float_or_none(row.get("co_ug_m3")),
+                    _float_or_none(row.get("no_ug_m3")),
+                    _float_or_none(row.get("no2_ug_m3")),
+                    _float_or_none(row.get("o3_ug_m3")),
+                    _float_or_none(row.get("so2_ug_m3")),
+                    _float_or_none(row.get("pm2_5_ug_m3")),
+                    _float_or_none(row.get("pm10_ug_m3")),
+                    _float_or_none(row.get("nh3_ug_m3")),
+                ))
 
                 if len(rows) % 500 == 0:
                     logger.info("Warehouse : %s lignes preparees...", len(rows))
