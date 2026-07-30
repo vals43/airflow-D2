@@ -146,7 +146,7 @@ def _dernier_horodatage_warehouse(conn):
         return None, None
 
 
-def charger_warehouse(dsn: str) -> int:
+def charger_warehouse(dsn: str, force: bool = False) -> int:
     if not CLEAN_CSV.exists():
         logger.warning("Fichier clean introuvable : %s", CLEAN_CSV)
         return 0
@@ -156,7 +156,10 @@ def charger_warehouse(dsn: str) -> int:
         conn = psycopg2.connect(dsn, connect_timeout=5)
         _creer_tables(conn)
 
-        derniere_date, derniere_heure = _dernier_horodatage_warehouse(conn)
+        if not force:
+            derniere_date, derniere_heure = _dernier_horodatage_warehouse(conn)
+        else:
+            derniere_date, derniere_heure = None, None
         logger.info("Dernier horodatage en warehouse : %s %s", derniere_date, derniere_heure)
 
         rows: list[tuple] = []

@@ -34,7 +34,7 @@ def backfill_aqi():
     @task
     def extraire_tout_l_historique() -> int:
         cle_api = Variable.get("OPENWEATHER_API_KEY")
-        now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
         total = 0
 
         for decalage in range(13):
@@ -73,7 +73,7 @@ def backfill_aqi():
         from load_warehouse import charger_warehouse as _charger
 
         dsn = Variable.get("WAREHOUSE_DSN")
-        _charger(dsn)
+        _charger(dsn, force=True)
 
     fichiers = extraire_tout_l_historique()
     nb = reconstruire_clean(fichiers)
