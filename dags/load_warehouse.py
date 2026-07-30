@@ -191,6 +191,14 @@ def charger_warehouse(dsn: str) -> int:
                     logger.info("Warehouse : %s lignes preparees...", len(rows))
 
         if rows:
+            seen = set()
+            unique_rows = []
+            for r in rows:
+                key = (r[0], r[1])
+                if key not in seen:
+                    seen.add(key)
+                    unique_rows.append(r)
+
             with conn.cursor() as cur:
                 execute_values(cur, """
                     INSERT INTO fact_air_quality
@@ -200,8 +208,9 @@ def charger_warehouse(dsn: str) -> int:
                         aqi = EXCLUDED.aqi, co = EXCLUDED.co, no = EXCLUDED.no,
                         no2 = EXCLUDED.no2, o3 = EXCLUDED.o3, so2 = EXCLUDED.so2,
                         pm2_5 = EXCLUDED.pm2_5, pm10 = EXCLUDED.pm10, nh3 = EXCLUDED.nh3
-                """, rows)
-                logger.info("Batch fact_air_quality : %s lignes inserees", len(rows))
+                """, unique_rows)
+                logger.info("Batch fact_air_quality : %s lignes inserees (%s dedupliquees)",
+                            len(unique_rows), len(rows) - len(unique_rows))
 
         conn.commit()
         logger.info("Warehouse charge : %s nouvelles lignes", len(rows))
