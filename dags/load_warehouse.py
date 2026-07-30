@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 
 import psycopg2
+from psycopg2.extras import execute_values
 
 logger = logging.getLogger(__name__)
 
@@ -145,39 +146,6 @@ def _dernier_horodatage_warehouse(conn):
         return None, None
 
 
-def _upsert_fact(cur, id_temps, id_ville, row):
-    cur.execute(
-        """
-        INSERT INTO fact_air_quality
-            (id_temps, id_ville, aqi, co, no, no2, o3, so2, pm2_5, pm10, nh3)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (id_temps, id_ville) DO UPDATE SET
-            aqi = EXCLUDED.aqi,
-            co = EXCLUDED.co,
-            no = EXCLUDED.no,
-            no2 = EXCLUDED.no2,
-            o3 = EXCLUDED.o3,
-            so2 = EXCLUDED.so2,
-            pm2_5 = EXCLUDED.pm2_5,
-            pm10 = EXCLUDED.pm10,
-            nh3 = EXCLUDED.nh3
-        """,
-        (
-            id_temps,
-            id_ville,
-            _int_or_none(row.get("aqi")),
-            _float_or_none(row.get("co_ug_m3")),
-            _float_or_none(row.get("no_ug_m3")),
-            _float_or_none(row.get("no2_ug_m3")),
-            _float_or_none(row.get("o3_ug_m3")),
-            _float_or_none(row.get("so2_ug_m3")),
-            _float_or_none(row.get("pm2_5_ug_m3")),
-            _float_or_none(row.get("pm10_ug_m3")),
-            _float_or_none(row.get("nh3_ug_m3")),
-        ),
-    )
-
-
 def charger_warehouse(dsn: str) -> int:
     if not CLEAN_CSV.exists():
         logger.warning("Fichier clean introuvable : %s", CLEAN_CSV)
@@ -185,16 +153,13 @@ def charger_warehouse(dsn: str) -> int:
 
     conn = None
     try:
-        conn = psycopg2.connect(dsn)
+        conn = psycopg2.connect(dsn, connect_timeout=5)
         _creer_tables(conn)
 
         derniere_date, derniere_heure = _dernier_horodatage_warehouse(conn)
-        logger.info(
-            "Dernier horodatage en warehouse : %s %s",
-            derniere_date, derniere_heure,
-        )
+        logger.info("Dernier horodatage en warehouse : %s %s", derniere_date, derniere_heure)
 
-        lignes = 0
+        rows: list[tuple] = []
         with open(CLEAN_CSV, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
@@ -208,11 +173,39 @@ def charger_warehouse(dsn: str) -> int:
                 with conn.cursor() as cur:
                     id_ville = _upsert_dim_ville(cur, row)
                     id_temps = _upsert_dim_temps(cur, row["horodatage_utc"])
-                    _upsert_fact(cur, id_temps, id_ville, row)
-                lignes += 1
+                    rows.append((
+                        id_temps,
+                        id_ville,
+                        _int_or_none(row.get("aqi")),
+                        _float_or_none(row.get("co_ug_m3")),
+                        _float_or_none(row.get("no_ug_m3")),
+                        _float_or_none(row.get("no2_ug_m3")),
+                        _float_or_none(row.get("o3_ug_m3")),
+                        _float_or_none(row.get("so2_ug_m3")),
+                        _float_or_none(row.get("pm2_5_ug_m3")),
+                        _float_or_none(row.get("pm10_ug_m3")),
+                        _float_or_none(row.get("nh3_ug_m3")),
+                    ))
+
+                if len(rows) % 500 == 0:
+                    logger.info("Warehouse : %s lignes preparees...", len(rows))
+
+        if rows:
+            with conn.cursor() as cur:
+                execute_values(cur, """
+                    INSERT INTO fact_air_quality
+                        (id_temps, id_ville, aqi, co, no, no2, o3, so2, pm2_5, pm10, nh3)
+                    VALUES %s
+                    ON CONFLICT (id_temps, id_ville) DO UPDATE SET
+                        aqi = EXCLUDED.aqi, co = EXCLUDED.co, no = EXCLUDED.no,
+                        no2 = EXCLUDED.no2, o3 = EXCLUDED.o3, so2 = EXCLUDED.so2,
+                        pm2_5 = EXCLUDED.pm2_5, pm10 = EXCLUDED.pm10, nh3 = EXCLUDED.nh3
+                """, rows)
+                logger.info("Batch fact_air_quality : %s lignes inserees", len(rows))
+
         conn.commit()
-        logger.info("Warehouse charge : %s nouvelles lignes", lignes)
-        return lignes
+        logger.info("Warehouse charge : %s nouvelles lignes", len(rows))
+        return len(rows)
     except Exception:
         if conn:
             conn.rollback()
