@@ -83,54 +83,6 @@ def _float_or_none(val):
         return None
 
 
-def _upsert_dim_ville(cur, row):
-    cur.execute(
-        """
-        INSERT INTO dim_ville (nom, pays, latitude, longitude)
-        VALUES (%s, %s, %s, %s)
-        ON CONFLICT (nom) DO UPDATE SET
-            pays = EXCLUDED.pays,
-            latitude = EXCLUDED.latitude,
-            longitude = EXCLUDED.longitude
-        RETURNING id_ville
-        """,
-        (row["ville"], row["pays"], row["latitude"], row["longitude"]),
-    )
-    return cur.fetchone()[0]
-
-
-def _upsert_dim_temps(cur, horodatage_utc):
-    dt = datetime.strptime(horodatage_utc, "%Y-%m-%d %H:%M:%S")
-    jour_semaine = dt.strftime("%A")
-    weekend = jour_semaine in ("Saturday", "Sunday")
-    cur.execute(
-        """
-        INSERT INTO dim_temps
-            (date_entiere, annee, mois, jour, heure, jour_semaine, weekend)
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        ON CONFLICT (date_entiere, heure) DO NOTHING
-        RETURNING id_temps
-        """,
-        (
-            dt.date(),
-            dt.year,
-            dt.month,
-            dt.day,
-            dt.hour,
-            jour_semaine,
-            weekend,
-        ),
-    )
-    row = cur.fetchone()
-    if row:
-        return row[0]
-    cur.execute(
-        "SELECT id_temps FROM dim_temps WHERE date_entiere = %s AND heure = %s",
-        (dt.date(), dt.hour),
-    )
-    return cur.fetchone()[0]
-
-
 def _dernier_horodatage_warehouse(conn):
     with conn.cursor() as cur:
         cur.execute("""
@@ -162,9 +114,9 @@ def charger_warehouse(dsn: str, force: bool = False) -> int:
             derniere_date, derniere_heure = None, None
         logger.info("Dernier horodatage en warehouse : %s %s", derniere_date, derniere_heure)
 
-        rows: list[tuple] = []
-        ville_cache: dict[str, int] = {}
-        temps_cache: dict[str, int] = {}
+        lignes_csv: list[dict] = []
+        villes_set: dict[str, dict] = {}
+        temps_set: dict[str, datetime] = {}
 
         with open(CLEAN_CSV, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -176,60 +128,88 @@ def charger_warehouse(dsn: str, force: bool = False) -> int:
                     ):
                         continue
 
-                nom = row["ville"]
-                if nom not in ville_cache:
-                    with conn.cursor() as cur:
-                        ville_cache[nom] = _upsert_dim_ville(cur, row)
-                id_ville = ville_cache[nom]
+                lignes_csv.append(row)
+                villes_set[row["ville"]] = row
+                temps_set[row["horodatage_utc"]] = (
+                    datetime.strptime(row["horodatage_utc"], "%Y-%m-%d %H:%M:%S")
+                )
 
-                ts = row["horodatage_utc"]
-                if ts not in temps_cache:
-                    with conn.cursor() as cur:
-                        temps_cache[ts] = _upsert_dim_temps(cur, ts)
-                id_temps = temps_cache[ts]
+        if not lignes_csv:
+            logger.info("Aucune nouvelle ligne a charger")
+            conn.commit()
+            return 0
 
-                rows.append((
-                    id_temps,
-                    id_ville,
-                    _int_or_none(row.get("aqi")),
-                    _float_or_none(row.get("co_ug_m3")),
-                    _float_or_none(row.get("no_ug_m3")),
-                    _float_or_none(row.get("no2_ug_m3")),
-                    _float_or_none(row.get("o3_ug_m3")),
-                    _float_or_none(row.get("so2_ug_m3")),
-                    _float_or_none(row.get("pm2_5_ug_m3")),
-                    _float_or_none(row.get("pm10_ug_m3")),
-                    _float_or_none(row.get("nh3_ug_m3")),
-                ))
+        with conn.cursor() as cur:
+            execute_values(cur, """
+                INSERT INTO dim_ville (nom, pays, latitude, longitude)
+                VALUES %s
+                ON CONFLICT (nom) DO UPDATE SET
+                    pays = EXCLUDED.pays,
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude
+            """, [
+                (v["ville"], v["pays"], v["latitude"], v["longitude"])
+                for v in villes_set.values()
+            ])
+            cur.execute("SELECT nom, id_ville FROM dim_ville")
+            cache_ville = dict(cur.fetchall())
 
-                if len(rows) % 500 == 0:
-                    logger.info("Warehouse : %s lignes preparees...", len(rows))
+        temps_batch = []
+        for ts_str, dt in temps_set.items():
+            jour_semaine = dt.strftime("%A")
+            weekend = jour_semaine in ("Saturday", "Sunday")
+            temps_batch.append((dt.date(), dt.year, dt.month, dt.day, dt.hour, jour_semaine, weekend))
 
-        if rows:
-            seen = set()
-            unique_rows = []
-            for r in rows:
-                key = (r[0], r[1])
-                if key not in seen:
-                    seen.add(key)
-                    unique_rows.append(r)
+        with conn.cursor() as cur:
+            execute_values(cur, """
+                INSERT INTO dim_temps
+                    (date_entiere, annee, mois, jour, heure, jour_semaine, weekend)
+                VALUES %s
+                ON CONFLICT (date_entiere, heure) DO NOTHING
+            """, temps_batch)
+            cur.execute("SELECT date_entiere, heure, id_temps FROM dim_temps")
+            cache_temps = {(d, h): id_t for d, h, id_t in cur.fetchall()}
 
-            with conn.cursor() as cur:
-                execute_values(cur, """
-                    INSERT INTO fact_air_quality
-                        (id_temps, id_ville, aqi, co, no, no2, o3, so2, pm2_5, pm10, nh3)
-                    VALUES %s
-                    ON CONFLICT (id_temps, id_ville) DO UPDATE SET
-                        aqi = EXCLUDED.aqi, co = EXCLUDED.co, no = EXCLUDED.no,
-                        no2 = EXCLUDED.no2, o3 = EXCLUDED.o3, so2 = EXCLUDED.so2,
-                        pm2_5 = EXCLUDED.pm2_5, pm10 = EXCLUDED.pm10, nh3 = EXCLUDED.nh3
-                """, unique_rows)
-                logger.info("Batch fact_air_quality : %s lignes inserees (%s dedupliquees)",
-                            len(unique_rows), len(rows) - len(unique_rows))
+        rows: list[tuple] = []
+        for row in lignes_csv:
+            dt = datetime.strptime(row["horodatage_utc"], "%Y-%m-%d %H:%M:%S")
+            id_ville = cache_ville[row["ville"]]
+            id_temps = cache_temps[(dt.date(), dt.hour)]
+            rows.append((
+                id_temps, id_ville,
+                _int_or_none(row.get("aqi")),
+                _float_or_none(row.get("co_ug_m3")),
+                _float_or_none(row.get("no_ug_m3")),
+                _float_or_none(row.get("no2_ug_m3")),
+                _float_or_none(row.get("o3_ug_m3")),
+                _float_or_none(row.get("so2_ug_m3")),
+                _float_or_none(row.get("pm2_5_ug_m3")),
+                _float_or_none(row.get("pm10_ug_m3")),
+                _float_or_none(row.get("nh3_ug_m3")),
+            ))
+
+        seen = set()
+        unique_rows = []
+        for r in rows:
+            key = (r[0], r[1])
+            if key not in seen:
+                seen.add(key)
+                unique_rows.append(r)
+
+        with conn.cursor() as cur:
+            execute_values(cur, """
+                INSERT INTO fact_air_quality
+                    (id_temps, id_ville, aqi, co, no, no2, o3, so2, pm2_5, pm10, nh3)
+                VALUES %s
+                ON CONFLICT (id_temps, id_ville) DO UPDATE SET
+                    aqi = EXCLUDED.aqi, co = EXCLUDED.co, no = EXCLUDED.no,
+                    no2 = EXCLUDED.no2, o3 = EXCLUDED.o3, so2 = EXCLUDED.so2,
+                    pm2_5 = EXCLUDED.pm2_5, pm10 = EXCLUDED.pm10, nh3 = EXCLUDED.nh3
+            """, unique_rows)
 
         conn.commit()
-        logger.info("Warehouse charge : %s nouvelles lignes", len(rows))
-        return len(rows)
+        logger.info("Warehouse charge : %s nouvelles lignes", len(unique_rows))
+        return len(unique_rows)
     except Exception:
         if conn:
             conn.rollback()
