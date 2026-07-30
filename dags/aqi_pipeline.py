@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from datetime import timedelta
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
@@ -12,6 +13,11 @@ from airflow.models import Variable
 
 from aqi_utils import VILLES, extraire_aqi_courant, sauvegarder_raw
 
+default_args = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=5),
+}
+
 
 @dag(
     dag_id="aqi_pipeline",
@@ -20,6 +26,7 @@ from aqi_utils import VILLES, extraire_aqi_courant, sauvegarder_raw
     start_date=pendulum.datetime(2026, 7, 1, tz="UTC"),
     catchup=False,
     tags=["aqi", "warehouse"],
+    default_args=default_args,
 )
 def aqi_pipeline():
 

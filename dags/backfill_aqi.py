@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
@@ -14,6 +14,11 @@ from airflow.models import Variable
 
 from aqi_utils import VILLES, extraire_aqi_historique, sauvegarder_raw
 
+default_args = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=5),
+}
+
 
 @dag(
     dag_id="backfill_aqi",
@@ -22,6 +27,7 @@ from aqi_utils import VILLES, extraire_aqi_historique, sauvegarder_raw
     start_date=pendulum.datetime(2026, 7, 1, tz="UTC"),
     catchup=False,
     tags=["aqi", "backfill"],
+    default_args=default_args,
 )
 def backfill_aqi():
 

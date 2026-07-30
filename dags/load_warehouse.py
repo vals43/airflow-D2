@@ -183,8 +183,9 @@ def charger_warehouse(dsn: str) -> int:
         logger.warning("Fichier clean introuvable : %s", CLEAN_CSV)
         return 0
 
-    conn = psycopg2.connect(dsn)
+    conn = None
     try:
+        conn = psycopg2.connect(dsn)
         _creer_tables(conn)
 
         derniere_date, derniere_heure = _dernier_horodatage_warehouse(conn)
@@ -200,7 +201,7 @@ def charger_warehouse(dsn: str) -> int:
                 if derniere_date is not None:
                     dt = datetime.strptime(row["horodatage_utc"], "%Y-%m-%d %H:%M:%S")
                     if dt.date() < derniere_date or (
-                        dt.date() == derniere_date and dt.hour <= derniere_heure
+                        dt.date() == derniere_date and dt.hour < derniere_heure
                     ):
                         continue
 
@@ -213,7 +214,9 @@ def charger_warehouse(dsn: str) -> int:
         logger.info("Warehouse charge : %s nouvelles lignes", lignes)
         return lignes
     except Exception:
-        conn.rollback()
+        if conn:
+            conn.rollback()
         raise
     finally:
-        conn.close()
+        if conn:
+            conn.close()
