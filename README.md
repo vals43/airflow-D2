@@ -80,6 +80,12 @@ Nom de fichier : `{ville}_{YYYYMMDDTHHMMSSZ}.json` (horodatage de l'appel).
 
 L'AQI est le maximum des sous-indices EPA calculés à partir des concentrations (facteurs de conversion µg/m³ → ppm/ppb documentés dans `dags/aqi_utils.py`).
 
+Le fichier est validé par `scripts/validate_clean.py` (colonnes, ≥ 5 villes, pas de doublon, tri chronologique, formats et unités) :
+
+```bash
+python scripts/validate_clean.py
+```
+
 ## Data Warehouse (Neon PostgreSQL)
 
 Schéma en étoile :
