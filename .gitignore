@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.pyo
 .idea/
+data/raw/
+data/export/
