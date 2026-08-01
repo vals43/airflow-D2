@@ -50,11 +50,14 @@ def sauvegarder_raw(ville_nom: str, payload: dict) -> Path:
     """
     Sauvegarde le JSON brut, un fichier par ville et par appel.
     Zone raw/ : jamais modifiee ensuite.
+    Structure : raw/{Ville}/{YYYY-MM-DD_HH:MM:SS}.json
     """
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    horodatage = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    nom_fichier = f"{ville_nom.replace(' ', '_').lower()}_{horodatage}.json"
-    chemin = RAW_DIR / nom_fichier
+    dossier_ville = RAW_DIR / ville_nom.replace(" ", "_")
+    dossier_ville.mkdir(parents=True, exist_ok=True)
+    horodatage = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H:%M:%S")
+    nom_fichier = f"{horodatage}.json"
+    chemin = dossier_ville / nom_fichier
     chemin.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return chemin
 

@@ -61,16 +61,19 @@ Pipeline de collecte horaire de la qualité de l'air (AQI) pour 5 villes, livran
 
 ```
 /opt/airflow/data/raw/
-├── antananarivo_20260701T000000Z.json
-├── london_20260701T000000Z.json
-├── new_york_20260701T000000Z.json
-├── paris_20260701T000000Z.json
-└── tokyo_20260701T000000Z.json
+├── Antananarivo/
+│   ├── 2026-07-01_00:00:00.json
+│   ├── 2026-07-01_01:00:00.json
+│   └── ...
+├── London/
+├── New_York/
+├── Paris/
+└── Tokyo/
 ```
 
 - **Un fichier par ville et par appel API**, jamais modifié après écriture
 - Format : JSON brut retourné par l'API
-- Nom : `{ville}_{YYYYMMDDTHHMMSSZ}.json` (horodatage de l'appel)
+- Nom : `YYYY-MM-DD_HH:MM:SS.json` dans `raw/{Ville}/` (horodatage de l'appel)
 
 ### clean/ — Zone nettoyée (reconstruite à chaque run)
 
