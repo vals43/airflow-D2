@@ -48,14 +48,17 @@ Pipeline ETL de collecte horaire de la qualité de l'air (AQI) pour 5 villes, or
 
 ```
 data/raw/
-├── antananarivo_20260701T000000Z.json
-├── london_20260701T000000Z.json
-├── new_york_20260701T000000Z.json
-├── paris_20260701T000000Z.json
-└── tokyo_20260701T000000Z.json
+├── Antananarivo/
+│   ├── 2026-07-01_00:00:00.json
+│   ├── 2026-07-01_01:00:00.json
+│   └── ...
+├── London/
+├── New_York/
+├── Paris/
+└── Tokyo/
 ```
 
-Nom de fichier : `{ville}_{YYYYMMDDTHHMMSSZ}.json` (horodatage de l'appel).
+Nom de fichier : `YYYY-MM-DD_HH:MM:SS.json` dans `data/raw/{Ville}/` (horodatage de l'appel).
 
 ### clean/ — Contrat de données
 

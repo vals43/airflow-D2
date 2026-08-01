@@ -46,7 +46,7 @@ def reconstruire_clean_csv() -> int:
         raise SystemExit(f"Erreur : {RAW_DIR} n'existe pas, lancez le backfill / le DAG d'abord")
 
     lignes_par_cle: dict[tuple[str, str], dict] = {}
-    fichiers = sorted(RAW_DIR.glob("*.json"))
+    fichiers = sorted(RAW_DIR.rglob("*.json"))
     print(f"Lecture de {len(fichiers)} fichiers dans {RAW_DIR}")
 
     for chemin in fichiers:
