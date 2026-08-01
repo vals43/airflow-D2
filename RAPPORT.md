@@ -21,13 +21,13 @@ Pipeline de collecte horaire de la qualité de l'air (AQI) pour 5 villes, déplo
 
 ## Répartition des tâches
 
-| Membre | Tâches |
-|--------|--------|
-| Teddy Andria | Mise en place du conteneur Airflow (Dockerfile, entrypoint), déploiement HF Spaces, migration de la base Airflow de SQLite vers PostgreSQL (Neon), `ARCHITECTURE.md` et `README.md` initiaux |
-| Manda Tiavina | DAG de backfill sur 12 mois, `load_warehouse.py` (chargement du schéma en étoile), passage en insertion par lots (`execute_values`) et cache des dimensions pour réduire les appels base |
-| Miahy | `aqi_utils.py` (appels API courant + historique), DAG `aqi_pipeline` horaire, pipeline de bout en bout (extract → raw → clean → warehouse) |
+| Membre          | Tâches |
+|-----------------|--|
+| Teddy Andria    | Mise en place du conteneur Airflow (Dockerfile, entrypoint), déploiement HF Spaces, migration de la base Airflow de SQLite vers PostgreSQL (Neon), `ARCHITECTURE.md` et `README.md` initiaux |
+| Manda Tiavina   | DAG de backfill sur 12 mois, `load_warehouse.py` (chargement du schéma en étoile), passage en insertion par lots (`execute_values`) et cache des dimensions pour réduire les appels base |
+| Miahy           | `aqi_utils.py` (appels API courant + historique), DAG `aqi_pipeline` horaire, pipeline de bout en bout (extract → raw → clean → warehouse) |
 | Anah Antonerrie | `build_clean.py` : reconstruction complète de `clean/qualite_air.csv` depuis `raw/`, déduplication ville + heure, tri |
-| _À compléter_ | _À compléter_ |
+| Amboara         | Prototype du DAG qualité de l'air, puis corrections finales : tri chronologique de `clean/`, nommage ISO des fichiers `raw/`, mise en cohérence de `ARCHITECTURE.md` |
 
 ## Architecture retenue
 
